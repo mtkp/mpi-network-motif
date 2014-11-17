@@ -1,18 +1,21 @@
 *.class
-
 build/*
 test/*
 
-# Package Files #
+### Package Files
 *.jar
 
-# log files
+### Log files
 *.log
 *.csv
 
-# temp files
+### Temp files
 *~
 *.tmp
 *.swp
 *.swo
 *.g6
+
+### MPI files
+.mpd.conf
+mpd.hosts
