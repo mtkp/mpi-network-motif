@@ -15,6 +15,7 @@ test/*
 *.swp
 *.swo
 *.g6
+*.jig
 
 ### MPI files
 .mpd.conf
