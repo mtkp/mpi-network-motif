@@ -1,0 +1,18 @@
+*.class
+
+build/*
+test/*
+
+# Package Files #
+*.jar
+
+# log files
+*.log
+*.csv
+
+# temp files
+*~
+*.tmp
+*.swp
+*.swo
+*.g6
