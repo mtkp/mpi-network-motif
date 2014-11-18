@@ -9,7 +9,7 @@ import java.util.NoSuchElementException;
 
 public class CompactHashSet implements Serializable {
 
-    private static final int DEFAULT_CAPACITY = 23;
+    private static final int DEFAULT_CAPACITY = 33;
     private static final int STARTING_BUCKET_SIZE = 4;
     private static final int NULL_ELEMENT = -1;
 

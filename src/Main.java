@@ -37,7 +37,9 @@ public class Main {
             start = System.currentTimeMillis();
         }
 
-        graph = (Graph)Util.broadcastObject(graph, master);
+        Object[] packet = mpiPacket(graph);
+        MPI.COMM_WORLD.Bcast(packet, 0, 1, MPI.OBJECT, master);
+        graph = (Graph)packet[0];
 
         if (MPI.COMM_WORLD.Rank() == master) {
             System.out.println(
@@ -74,16 +76,10 @@ public class Main {
             start = System.currentTimeMillis();
         }
 
-        System.out.println(MPI.COMM_WORLD.Rank() + " subgraphs: " + subgraphs.size() + ", labels:" + labels.size());
-
-
-        Object[] packet = new Object[1];
-        packet[0] = (Object)labels;
         Object[] packets = new Object[MPI.COMM_WORLD.Size()];
         MPI.COMM_WORLD.Gather(
-            packet,  0, 1, MPI.OBJECT,
-            packets, 0, 1, MPI.OBJECT,
-            master);
+            mpiPacket(labels),  0, 1, MPI.OBJECT,
+            packets           , 0, 1, MPI.OBJECT, master);
 
         // only need master node from this point forward.
         if (MPI.COMM_WORLD.Rank() != master) {
@@ -130,5 +126,11 @@ public class Main {
         this.filename = filename;
         this.motifSize = motifSize;
         this.showResults = showResults;
+    }
+
+    public static Object[] mpiPacket(Object obj) {
+        Object[] packet = new Object[1];
+        packet[0] = obj;
+        return packet;
     }
 }
