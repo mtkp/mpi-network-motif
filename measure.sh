@@ -14,7 +14,7 @@ cp mpd.hosts mpd.hosts.tmp
 
 # run the program with 1, 2, and 4 threads
 run_prog() {
-  ./run.sh 2>&1
+  ./run.sh $data_file $motif_size 2>&1
 }
 
 # 1 node

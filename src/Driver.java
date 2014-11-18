@@ -1,15 +1,70 @@
 // Driver.java
 
+import java.util.*;
+
 import mpi.*;
 
 public class Driver {
-    private final static int aSize = 100; // the size of dArray
-    private final static int master = 0;  // the master rank
-    private final static int tag = 0;     // Send/Recv's tag is always 0.
-
     public static void main(String[] args) throws MPIException {
+        // verify arguments
+        if (args.length < 2) {
+            System.out.println(
+                "usage: Driver data_file motif_size [--show-results]");
+            System.exit(-1);
+        }
+
+        boolean showResults = false;
+        if (args.length == 3 && args[2].equals("--show-results")) {
+            showResults = true;
+        }
+
         // Start the MPI library.
         MPI.Init(args);
+
+        Main app = new Main(args[0], Integer.parseInt(args[1]), showResults);
+        app.run();
+
+        // Terminate the MPI library.
+        MPI.Finalize();
+    }
+}
+
+
+/*
+
+
+
+        // verify arguments
+        if (args.length < 2) {
+            System.out.println(
+                "usage: Driver data_file motif_size [--show-results]");
+            System.exit(-1);
+        }
+
+        boolean showResults = false;
+        if (args.length == 3 && args[2].equals("--show-results")) {
+            showResults = true;
+        }
+
+        // start MASS
+        MASS.init(massArgs, nProcesses, nThreads);
+
+        // run application main
+        Main app = new Main(args[6], Integer.parseInt(args[7]), showResults);
+        app.run();
+
+        // finish MASS
+        MASS.finish();
+
+
+
+
+
+
+
+
+
+
 
         // compute my own stripe
         int stripe = aSize / MPI.COMM_WORLD.Size(); // each portion of array
@@ -64,9 +119,4 @@ public class Driver {
             // send the results back to the master
             MPI.COMM_WORLD.Send(dArray, 0, stripe, MPI.DOUBLE, master, tag);
         }
-
-        // Terminate the MPI library.
-        MPI.Finalize();
-    }
-
-}
+*/
