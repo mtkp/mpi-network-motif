@@ -74,6 +74,9 @@ public class Main {
             start = System.currentTimeMillis();
         }
 
+        System.out.println(MPI.COMM_WORLD.Rank() + " subgraphs: " + subgraphs.size() + ", labels:" + labels.size());
+
+
         Object[] packet = new Object[1];
         packet[0] = (Object)labels;
         Object[] packets = new Object[MPI.COMM_WORLD.Size()];

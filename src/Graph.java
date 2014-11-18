@@ -4,10 +4,10 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 
 public class Graph implements java.io.Serializable {
     private List<AdjacencyList> adjacencyLists;
@@ -85,11 +85,20 @@ public class Graph implements java.io.Serializable {
     // parses a data file into an adjacency list representing the graph
     private void parse(String filename) throws IOException {
         BufferedReader reader = new BufferedReader(new FileReader(filename));
-
-        String delimiters = "\\s+"; // one or more whitespace characters
+        List<String> lines = new ArrayList<String>();
         String currentLine = reader.readLine();
         while (currentLine != null) {
-            String[] edge = currentLine.split(delimiters);
+            lines.add(currentLine);
+            currentLine = reader.readLine();
+        }
+        reader.close();
+
+        // avoid data collection bias by randomly parsing lines of data
+        Collections.shuffle(lines);
+
+        String delimiters = "\\s+"; // one or more whitespace characters
+        for (String line:lines) {
+            String[] edge = line.split(delimiters);
             int fromIndex = getOrCreateIndex(edge[0]);
             int toIndex = getOrCreateIndex(edge[1]);
 
@@ -98,11 +107,7 @@ public class Graph implements java.io.Serializable {
                 adjacencyLists.get(fromIndex).add(toIndex);
                 adjacencyLists.get(toIndex).add(fromIndex);
             }
-
-            currentLine = reader.readLine();
         }
-
-        reader.close();
     }
 
     // get index of a node given the node's name
