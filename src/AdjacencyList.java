@@ -10,6 +10,10 @@ public class AdjacencyList implements Serializable {
         this.nodes = new CompactHashSet();
     }
 
+    private AdjacencyList(AdjacencyList adjacencyList) {
+        this.nodes = adjacencyList.nodes.copy();
+    }
+
     public void add(int node) {
         nodes.add(node);
     }
@@ -30,11 +34,16 @@ public class AdjacencyList implements Serializable {
         return nodes.isEmpty();
     }
 
+    @Override
     public String toString() {
         return nodes.toString();
     }
 
     public boolean remove(int node) {
         return nodes.remove(node);
+    }
+
+    public AdjacencyList copy() {
+        return new AdjacencyList(this);
     }
 }

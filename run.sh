@@ -16,13 +16,16 @@ sleep 1
 program="Driver"
 data_file=$1
 motif_size=$2
-show_results=$3
+threads_per_node=$3
+show_results=$4
 mpi_cp="/usr/apps/mpiJava-`uname -p`/lib/classes"
 cp_additions="build"
 nodes=$((`cat mpd.hosts | wc -w` + 1))
 
 mpdboot -n $nodes
 mpirun -n $nodes java -cp $mpi_cp:$cp_additions:. Driver \
+  $nodes \
+  $threads_per_node \
   $data_file \
   $motif_size \
   $show_results

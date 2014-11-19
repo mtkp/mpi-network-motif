@@ -45,6 +45,19 @@ public class Subgraph implements Serializable {
         return size() == order();
     }
 
+    public int root() {
+        return nodes[0];
+    }
+
+    public boolean contains(int node) {
+        for (int i = 0; i < size(); i++) {
+            if (get(i) == node) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public void add(int node, AdjacencyList adjacencyList) {
         int index = node;
         nodes[currentSize] = index;
@@ -54,12 +67,21 @@ public class Subgraph implements Serializable {
                 matrix.addEdge(i, currentSize);
             }
         }
-
         currentSize++;
     }
 
     public int get(int index) {
         return nodes[index];
+    }
+
+    @Override
+    public String toString() {
+        String s = "[";
+        for (int i = 0; i < size(); i++) {
+            s = s + get(i) + ", ";
+        }
+        s = s + "]";
+        return s;
     }
 
     private void readObject(ObjectInputStream ois)

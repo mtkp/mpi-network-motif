@@ -7,17 +7,52 @@ import mpi.*;
 
 public class Main {
 
-    public  final static int master = 0;  // the master rank
+    private static class ComputeThread extends Thread {
+
+        private int start;
+        private int interval;
+        private int motifSize;
+        private Graph graph;
+        private Map<String, Integer> subgraphs;
+
+        public ComputeThread(int start, int interval, int motifSize,
+                             Graph graph, Map<String, Integer> subgraphs) {
+            this.start = start;
+            this.interval = interval;
+            this.motifSize = motifSize;
+            this.graph = graph;
+            this.subgraphs = subgraphs;
+        }
+
+        public void run() {
+            for (int i = start; i < graph.size(); i += interval) {
+                Subgraph subgraph = new Subgraph(motifSize);
+                AdjacencyList adjacencyList = new AdjacencyList();
+                CompactHashSet.Iter iter = graph.getAdjacencyList(i).iterator();
+                while (iter.hasNext()) {
+                    int next = iter.next();
+                    if (next > i) {
+                        adjacencyList.add(next);
+                    }
+                }
+                subgraph.add(i, graph.getAdjacencyList(i));
+                graph.enumerate(subgraph, adjacencyList, subgraphs);
+            }
+        }
+    }
+
+    private final static int master = 0;  // the master rank
     private final static int tag = 0;     // Send/Recv's tag is always 0.
 
     // app execution code goes here
     public void run() throws MPIException {
+        int commRank = MPI.COMM_WORLD.Rank();
+        int commSize = MPI.COMM_WORLD.Size();
+        long start = System.currentTimeMillis();
+
         Graph graph = null;
 
-        long start = System.currentTimeMillis();
-        long overallStart = start;
-
-        if (MPI.COMM_WORLD.Rank() == master) {
+        if (commRank == master) {
             System.out.println("Parsing input data file '" + filename + "'...");
             start = System.currentTimeMillis();
             try {
@@ -31,17 +66,18 @@ public class Main {
                 "generate a network of size " + graph.size());
         }
 
-        // broadcast the base graph to all nodes
-        if (MPI.COMM_WORLD.Rank() == master) {
+        if (commRank == master) {
             System.out.println("Setting up MPI nodes...");
             start = System.currentTimeMillis();
         }
 
+        // broadcast the base graph from the master to all nodes
+        // (MPI requires object array to send and receive data)
         Object[] packet = mpiPacket(graph);
         MPI.COMM_WORLD.Bcast(packet, 0, 1, MPI.OBJECT, master);
         graph = (Graph)packet[0];
 
-        if (MPI.COMM_WORLD.Rank() == master) {
+        if (commRank == master) {
             System.out.println(
                 (System.currentTimeMillis() - start) + " milliseconds to " +
                 "set up MPI nodes.");
@@ -52,22 +88,49 @@ public class Main {
             start = System.currentTimeMillis();
         }
 
+        // execute ESU for the indexes this rank is responsible for, equal
+        // to: indexes = (rank + (size * n))
+        int interval = commSize * (threads.length + 1);
         Map<String, Integer> subgraphs = new HashMap<String, Integer>();
-
-        for (int i = MPI.COMM_WORLD.Rank(); i < graph.size(); i += MPI.COMM_WORLD.Size()) {
-            graph.enumerate(
-                i,
-                new Subgraph(motifSize),
-                new AdjacencyList(),
+        for (int i = 0; i < threads.length; i++) {
+            threads[i] = new ComputeThread(
+                commRank + (commSize * (i + 1)),
+                interval,
+                motifSize,
+                graph,
                 subgraphs);
+            threads[i].start();
+        }
+        for (int i = commRank; i < graph.size(); i += interval) {
+            Subgraph subgraph = new Subgraph(motifSize);
+            AdjacencyList adjacencyList = new AdjacencyList();
+            CompactHashSet.Iter iter = graph.getAdjacencyList(i).iterator();
+            while (iter.hasNext()) {
+                int next = iter.next();
+                if (next > i) {
+                    adjacencyList.add(next);
+                }
+            }
+            subgraph.add(i, graph.getAdjacencyList(i));
+            graph.enumerate(subgraph, adjacencyList, subgraphs);
+        }
+        for (int i = 0; i < threads.length; i++) {
+            try {
+                threads[i].join();
+            } catch (InterruptedException e) {
+                System.out.println("Interrupted exception thrown...");
+                e.printStackTrace();
+            }
         }
 
+        // run the labeler on each MPI node before gathering data,
+        // to minimize size of data transfer
         Labeler labeler = new Labeler();
         Map<String, Integer> labels = labeler.getCanonicalLabels(subgraphs);
 
         MPI.COMM_WORLD.Barrier();
 
-        if (MPI.COMM_WORLD.Rank() == master) {
+        if (commRank == master) {
             System.out.println(
                 (System.currentTimeMillis() - start) + " milliseconds to " +
                 "execute ESU and determine subgraph (label) frequency.");
@@ -76,13 +139,15 @@ public class Main {
             start = System.currentTimeMillis();
         }
 
-        Object[] packets = new Object[MPI.COMM_WORLD.Size()];
+        // use gather to collect objects back at the master node
+        // (MPI requires object array to send and receive data)
+        Object[] packets = new Object[commSize];
         MPI.COMM_WORLD.Gather(
             mpiPacket(labels),  0, 1, MPI.OBJECT,
             packets           , 0, 1, MPI.OBJECT, master);
 
         // only need master node from this point forward.
-        if (MPI.COMM_WORLD.Rank() != master) {
+        if (commRank != master) {
             return;
         }
 
@@ -90,7 +155,7 @@ public class Main {
             (System.currentTimeMillis() - start) + " milliseconds to " +
             "collect label frequencies");
 
-        // // collect the labels into one master label collection
+        // collect the labels into one master label collection
         for (int i = 1; i < packets.length; i++) {
             // convert generic Object types
             @SuppressWarnings("unchecked")
@@ -107,10 +172,6 @@ public class Main {
             }
         }
 
-        System.out.println(
-            (System.currentTimeMillis() - overallStart) + " milliseconds to " +
-            "complete the program");
-
         if (showResults) {
             System.out.println("Label\tFrequency");
             for (Map.Entry<String, Integer> entry:labels.entrySet()) {
@@ -119,15 +180,18 @@ public class Main {
         }
     }
 
+    private Thread[] threads;
     private int motifSize;
     private String filename;
     private boolean showResults;
-    public Main(String filename, int motifSize, boolean showResults) {
+    public Main(int nThreads, String filename, int motifSize, boolean showResults) {
+        this.threads = new Thread[nThreads - 1];
         this.filename = filename;
         this.motifSize = motifSize;
         this.showResults = showResults;
     }
 
+    // creates an object array container, or "packet", for a single object
     public static Object[] mpiPacket(Object obj) {
         Object[] packet = new Object[1];
         packet[0] = obj;

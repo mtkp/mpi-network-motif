@@ -38,48 +38,59 @@ public class Graph implements java.io.Serializable {
         return indexToName.get(index);
     }
 
-    public void enumerate(
-        int node,
-        Subgraph subgraph,
-        AdjacencyList existingExtension,
-        Map<String, Integer> subgraphs) {
-
-        // add self to subgraph
-        AdjacencyList adjacencyList = adjacencyLists.get(node);
-        subgraph.add(node, adjacencyList);
-
+    public void enumerate(Subgraph subgraph, AdjacencyList extension,
+                          Map<String, Integer> subgraphs) {
         if (subgraph.isComplete()) {
             String repr = subgraph.getByteString();
             int count = 1;
-            if (subgraphs.containsKey(repr)) {
-                count += subgraphs.get(repr);
+            synchronized(subgraphs) {
+                if (subgraphs.containsKey(repr)) {
+                    count += subgraphs.get(repr);
+                }
+                subgraphs.put(repr, count);
             }
-            subgraphs.put(repr, count);
         } else {
-            AdjacencyList extension = new AdjacencyList();
-
-            CompactHashSet.Iter iter = adjacencyList.iterator();
+            int v = subgraph.root();
+            CompactHashSet.Iter iter = extension.iterator();
             while (iter.hasNext()) {
-                int nextNode = iter.next();
-                if (nextNode > node) {
-                    extension.add(nextNode);
+                int w = iter.next();
+                iter.remove();
+
+                AdjacencyList nextExtension = extension.copy();
+                AdjacencyList adjacencyList = adjacencyLists.get(w);
+
+                CompactHashSet.Iter candidateIter =
+                    adjacencyLists.get(w).iterator();
+                while (candidateIter.hasNext()) {
+                    int u = candidateIter.next();
+                    if (u > v) {
+                        if (isExclusive(u, subgraph)) {
+                            nextExtension.add(u);
+                        }
+                    }
                 }
-            }
 
-            iter = existingExtension.iterator();
-            while (iter.hasNext()) {
-                int nextNode = iter.next();
-                if (nextNode > node) {
-                    extension.add(nextNode);
-                }
-            }
-
-            iter = extension.iterator();
-            while (iter.hasNext()) {
-                int nextNode = iter.next();
-                enumerate(nextNode, subgraph.copy(), extension, subgraphs);
+                Subgraph subgraphUnion = subgraph.copy();
+                subgraphUnion.add(w, adjacencyLists.get(w));
+                enumerate(subgraphUnion, nextExtension, subgraphs);
             }
         }
+    }
+
+    private boolean isExclusive(int node, Subgraph subgraph) {
+        for (int i = 0; i < subgraph.size(); i++) {
+            int subgraphNode = subgraph.get(i);
+            if (subgraphNode == node) {
+                return false;
+            }
+        }
+        for (int i = 0; i < subgraph.size(); i++) {
+            int subgraphNode = subgraph.get(i);
+            if (adjacencyLists.get(subgraphNode).contains(node)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     // parses a data file into an adjacency list representing the graph
@@ -93,7 +104,8 @@ public class Graph implements java.io.Serializable {
         }
         reader.close();
 
-        // avoid data collection bias by randomly parsing lines of data
+        // avoid clustering (data collection bias) by randomly parsing the
+        // input lines of data
         Collections.shuffle(lines);
 
         String delimiters = "\\s+"; // one or more whitespace characters

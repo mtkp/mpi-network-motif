@@ -9,7 +9,7 @@ import java.util.NoSuchElementException;
 
 public class CompactHashSet implements Serializable {
 
-    private static final int DEFAULT_CAPACITY = 33;
+    private static final int DEFAULT_CAPACITY = 29;
     private static final int STARTING_BUCKET_SIZE = 4;
     private static final int NULL_ELEMENT = -1;
 
@@ -31,6 +31,15 @@ public class CompactHashSet implements Serializable {
         for (int i = 0; i < table.length; i++) {
             table[i] = null;
         }
+    }
+
+    public CompactHashSet copy() {
+        CompactHashSet copy = new CompactHashSet(table.length);
+        Iter iter = iterator();
+        while (iter.hasNext()) {
+            copy.add(iter.next());
+        }
+        return copy;
     }
 
     public int size() {
@@ -123,8 +132,11 @@ public class CompactHashSet implements Serializable {
         }
     }
 
+    // increase the size of the bucket at the given index
     private void grow(int bucketIndex) {
+        // double the bucket size
         int[] newBucket = new int[table[bucketIndex].length * 2];
+
         int index = 0;
         for (; index < table[bucketIndex].length; index++) {
             newBucket[index] = table[bucketIndex][index];
@@ -143,6 +155,7 @@ public class CompactHashSet implements Serializable {
         return new Iter(this);
     }
 
+    @Override
     public String toString() {
         String s = "[";
         Iter iter = iterator();
