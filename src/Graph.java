@@ -80,7 +80,6 @@ public class Graph implements java.io.Serializable {
 
                 // next extension contains at least the current extension
                 AdjacencyList nextExtension = extension.copy();
-                AdjacencyList adjacencyList = getAdjacencyList(w);
 
                 // examine each node 'u' from the set of nodes adjacent to 'w'
                 // and add it to the next extension if it is exclusive
