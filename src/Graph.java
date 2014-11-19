@@ -58,47 +58,53 @@ public class Graph implements java.io.Serializable {
     // extend the subgraphs recursively
     private void extend(Subgraph subgraph, AdjacencyList extension,
                         Map<String, Integer> subgraphs) {
-        if (subgraph.isComplete()) {
-            // store in the subgraphs map using the subgraph byte string
-            String repr = subgraph.getByteString();
-            int count = 1;
-            synchronized(subgraphs) {
-                if (subgraphs.containsKey(repr)) {
-                    count += subgraphs.get(repr);
-                }
-                subgraphs.put(repr, count);
-            }
-        } else {
-            int v = subgraph.root();
-            CompactHashSet.Iter wIter = extension.iterator();
+        int v = subgraph.root();
+        CompactHashSet.Iter wIter = extension.iterator();
 
-            // extend the subgraph using the ESU algorithm, choosing the
-            // next node, 'w', from the extension set
+        // optimize by not creating next extension if subgraph is
+        // 1 node away from completion
+        if (subgraph.size() == subgraph.order() - 1) {
             while (wIter.hasNext()) {
                 int w = wIter.next();
-                wIter.remove();
-
-                // next extension contains at least the current extension
-                AdjacencyList nextExtension = extension.copy();
-
-                // examine each node 'u' from the set of nodes adjacent to 'w'
-                // and add it to the next extension if it is exclusive
-                CompactHashSet.Iter uIter = getAdjacencyList(w).iterator();
-                while (uIter.hasNext()) {
-                    int u = uIter.next();
-                    if (u > v) {
-                        if (isExclusive(u, subgraph)) {
-                            nextExtension.add(u);
-                        }
-                    }
-                }
 
                 // construct a union of w and the existing subgraph
                 Subgraph subgraphUnion = subgraph.copy();
                 subgraphUnion.add(w, getAdjacencyList(w));
 
-                extend(subgraphUnion, nextExtension, subgraphs);
+                // store in the subgraphs map using the subgraph byte string
+                String repr = subgraphUnion.getByteString();
+                int count = 1;
+                if (subgraphs.containsKey(repr)) {
+                    count += subgraphs.get(repr);
+                }
+                subgraphs.put(repr, count);
             }
+        }
+
+        while (wIter.hasNext()) {
+            int w = wIter.next();
+            wIter.remove();
+
+            // next extension contains at least the current extension
+            AdjacencyList nextExtension = extension.copy();
+
+            // examine each node 'u' from the set of nodes adjacent to 'w'
+            // and add it to the next extension if it is exclusive
+            CompactHashSet.Iter uIter = getAdjacencyList(w).iterator();
+            while (uIter.hasNext()) {
+                int u = uIter.next();
+                if (u > v) {
+                    if (isExclusive(u, subgraph)) {
+                        nextExtension.add(u);
+                    }
+                }
+            }
+
+            // construct a union of w and the existing subgraph
+            Subgraph subgraphUnion = subgraph.copy();
+            subgraphUnion.add(w, getAdjacencyList(w));
+
+            extend(subgraphUnion, nextExtension, subgraphs);
         }
     }
 
