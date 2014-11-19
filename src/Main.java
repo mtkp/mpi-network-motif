@@ -9,15 +9,15 @@ public class Main {
 
     private static class ComputeThread extends Thread {
 
-        private int start;
+        private int startingIndex;
         private int interval;
         private int motifSize;
         private Graph graph;
         private Map<String, Integer> subgraphs;
 
-        public ComputeThread(int start, int interval, int motifSize,
+        public ComputeThread(int startingIndex, int interval, int motifSize,
                              Graph graph, Map<String, Integer> subgraphs) {
-            this.start = start;
+            this.startingIndex = startingIndex;
             this.interval = interval;
             this.motifSize = motifSize;
             this.graph = graph;
@@ -25,24 +25,11 @@ public class Main {
         }
 
         public void run() {
-            for (int i = start; i < graph.size(); i += interval) {
-                Subgraph subgraph = new Subgraph(motifSize);
-                AdjacencyList adjacencyList = new AdjacencyList();
-                CompactHashSet.Iter iter = graph.getAdjacencyList(i).iterator();
-                while (iter.hasNext()) {
-                    int next = iter.next();
-                    if (next > i) {
-                        adjacencyList.add(next);
-                    }
-                }
-                subgraph.add(i, graph.getAdjacencyList(i));
-                graph.enumerate(subgraph, adjacencyList, subgraphs);
+            for (int i = startingIndex; i < graph.size(); i += interval) {
+                graph.enumerate(i, motifSize, subgraphs);
             }
         }
     }
-
-    private final static int master = 0;  // the master rank
-    private final static int tag = 0;     // Send/Recv's tag is always 0.
 
     // app execution code goes here
     public void run() throws MPIException {
@@ -92,28 +79,25 @@ public class Main {
         // to: indexes = (rank + (size * n))
         int interval = commSize * (threads.length + 1);
         Map<String, Integer> subgraphs = new HashMap<String, Integer>();
+
+        // start worker threads at this node
         for (int i = 0; i < threads.length; i++) {
+            int startingIndex = commRank + (commSize * (i + 1));
             threads[i] = new ComputeThread(
-                commRank + (commSize * (i + 1)),
+                startingIndex,
                 interval,
                 motifSize,
                 graph,
                 subgraphs);
             threads[i].start();
         }
+
+        // execute algorithm for main thread at this node
         for (int i = commRank; i < graph.size(); i += interval) {
-            Subgraph subgraph = new Subgraph(motifSize);
-            AdjacencyList adjacencyList = new AdjacencyList();
-            CompactHashSet.Iter iter = graph.getAdjacencyList(i).iterator();
-            while (iter.hasNext()) {
-                int next = iter.next();
-                if (next > i) {
-                    adjacencyList.add(next);
-                }
-            }
-            subgraph.add(i, graph.getAdjacencyList(i));
-            graph.enumerate(subgraph, adjacencyList, subgraphs);
+            graph.enumerate(i, motifSize, subgraphs);
         }
+
+        // join on worker threads at this node
         for (int i = 0; i < threads.length; i++) {
             try {
                 threads[i].join();
@@ -180,6 +164,8 @@ public class Main {
         }
     }
 
+    private final static int master = 0;  // the master rank
+    private final static int tag = 0;     // Send/Recv's tag is always 0.
     private Thread[] threads;
     private int motifSize;
     private String filename;

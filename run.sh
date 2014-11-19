@@ -1,11 +1,11 @@
 #!/bin/bash -e
 
 # usage
-( test -z $2 ) &&
-  echo "usage: run.sh data_file motif_size [--show-results]" &&
+( test -z $3 ) &&
+  echo "usage: run.sh data_file motif_size threads_per_node [--show-results]" &&
   echo "       (default is to not show results)" &&
-  echo "  ex1: run.sh path/to/data 3 --show-results" &&
-  echo "  ex2: run.sh path/to/data 5 " &&
+  echo "  ex1: run.sh path/to/data 3 4 --show-results" &&
+  echo "  ex2: run.sh path/to/data 5 2" &&
   exit 1
 
 # terminate any existing MASS nodes

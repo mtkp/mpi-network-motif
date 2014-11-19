@@ -26,6 +26,7 @@ public class Graph implements java.io.Serializable {
         return adjacencyLists.size();
     }
 
+    // get the adjacency list for a given node
     public AdjacencyList getAdjacencyList(Integer index) {
         return adjacencyLists.get(index);
     }
@@ -38,9 +39,27 @@ public class Graph implements java.io.Serializable {
         return indexToName.get(index);
     }
 
-    public void enumerate(Subgraph subgraph, AdjacencyList extension,
+    // enumerate all subgraphs for a given node index
+    public void enumerate(int index, int motifSize,
                           Map<String, Integer> subgraphs) {
+        Subgraph subgraph = new Subgraph(motifSize);
+        AdjacencyList adjacencyList = new AdjacencyList();
+        CompactHashSet.Iter iter = getAdjacencyList(index).iterator();
+        while (iter.hasNext()) {
+            int next = iter.next();
+            if (next > index) {
+                adjacencyList.add(next);
+            }
+        }
+        subgraph.add(index, getAdjacencyList(index));
+        extend(subgraph, adjacencyList, subgraphs);
+    }
+
+    // extend the subgraphs recursively
+    private void extend(Subgraph subgraph, AdjacencyList extension,
+                        Map<String, Integer> subgraphs) {
         if (subgraph.isComplete()) {
+            // store in the subgraphs map using the subgraph byte string
             String repr = subgraph.getByteString();
             int count = 1;
             synchronized(subgraphs) {
@@ -51,18 +70,23 @@ public class Graph implements java.io.Serializable {
             }
         } else {
             int v = subgraph.root();
-            CompactHashSet.Iter iter = extension.iterator();
-            while (iter.hasNext()) {
-                int w = iter.next();
-                iter.remove();
+            CompactHashSet.Iter wIter = extension.iterator();
 
+            // extend the subgraph using the ESU algorithm, choosing the
+            // next node, 'w', from the extension set
+            while (wIter.hasNext()) {
+                int w = wIter.next();
+                wIter.remove();
+
+                // next extension contains at least the current extension
                 AdjacencyList nextExtension = extension.copy();
-                AdjacencyList adjacencyList = adjacencyLists.get(w);
+                AdjacencyList adjacencyList = getAdjacencyList(w);
 
-                CompactHashSet.Iter candidateIter =
-                    adjacencyLists.get(w).iterator();
-                while (candidateIter.hasNext()) {
-                    int u = candidateIter.next();
+                // examine each node 'u' from the set of nodes adjacent to 'w'
+                // and add it to the next extension if it is exclusive
+                CompactHashSet.Iter uIter = getAdjacencyList(w).iterator();
+                while (uIter.hasNext()) {
+                    int u = uIter.next();
                     if (u > v) {
                         if (isExclusive(u, subgraph)) {
                             nextExtension.add(u);
@@ -70,13 +94,18 @@ public class Graph implements java.io.Serializable {
                     }
                 }
 
+                // construct a union of w and the existing subgraph
                 Subgraph subgraphUnion = subgraph.copy();
-                subgraphUnion.add(w, adjacencyLists.get(w));
-                enumerate(subgraphUnion, nextExtension, subgraphs);
+                subgraphUnion.add(w, getAdjacencyList(w));
+
+                extend(subgraphUnion, nextExtension, subgraphs);
             }
         }
     }
 
+    // returns true if the node index is exclusive to the given subgraph
+    // (that is, is not already in the subgraph, and is not adjacent to any of
+    //  the nodes in the subgraph)
     private boolean isExclusive(int node, Subgraph subgraph) {
         for (int i = 0; i < subgraph.size(); i++) {
             int subgraphNode = subgraph.get(i);
@@ -86,7 +115,7 @@ public class Graph implements java.io.Serializable {
         }
         for (int i = 0; i < subgraph.size(); i++) {
             int subgraphNode = subgraph.get(i);
-            if (adjacencyLists.get(subgraphNode).contains(node)) {
+            if (getAdjacencyList(subgraphNode).contains(node)) {
                 return false;
             }
         }
@@ -116,8 +145,8 @@ public class Graph implements java.io.Serializable {
 
             // don't add self edges
             if (fromIndex != toIndex) {
-                adjacencyLists.get(fromIndex).add(toIndex);
-                adjacencyLists.get(toIndex).add(fromIndex);
+                getAdjacencyList(fromIndex).add(toIndex);
+                getAdjacencyList(toIndex).add(fromIndex);
             }
         }
     }
