@@ -74,10 +74,12 @@ public class Graph implements java.io.Serializable {
                 // store in the subgraphs map using the subgraph byte string
                 String repr = subgraphUnion.getByteString();
                 int count = 1;
-                if (subgraphs.containsKey(repr)) {
-                    count += subgraphs.get(repr);
+                synchronized(subgraphs) {
+                    if (subgraphs.containsKey(repr)) {
+                        count += subgraphs.get(repr);
+                    }
+                    subgraphs.put(repr, count);
                 }
-                subgraphs.put(repr, count);
             }
         }
 
