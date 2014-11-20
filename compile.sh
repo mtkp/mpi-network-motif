@@ -3,12 +3,15 @@
 # usage: 
 #  $ compile.sh
 
+mpi_cp="/usr/apps/mpiJava-`uname -p`/lib/classes"
+
 # build program
 echo "Building program..." 1>&2
 if [ ! -d build ] ; then mkdir build; fi
 rm -f build/*.class
 find ./src -name "*.java" > src.java.list
-javac $1 -d build @src.java.list
+javac $1 -cp $mpi_cp:. -d build @src.java.list
+
 
 # clean up list files
 rm -f *.java.list
