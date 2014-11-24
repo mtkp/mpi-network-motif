@@ -43,22 +43,6 @@ public class Graph implements java.io.Serializable {
         extend(subgraph, adjacencyList, subgraphs);
     }
 
-    // enumerate all subgraphs for a given node index
-    public void enumerate(int index, int motifSize,
-                          Map<String, Integer> subgraphs) {
-        Subgraph subgraph = new Subgraph(motifSize);
-        AdjacencyList adjacencyList = new AdjacencyList();
-        CompactHashSet.Iter iter = getAdjacencyList(index).iterator();
-        while (iter.hasNext()) {
-            int next = iter.next();
-            if (next > index) {
-                adjacencyList.add(next);
-            }
-        }
-        subgraph.add(index, getAdjacencyList(index));
-        extend(subgraph, adjacencyList, subgraphs);
-    }
-
     // extend the subgraphs recursively
     private void extend(Subgraph subgraph, AdjacencyList extension,
                         Map<String, Integer> subgraphs) {
