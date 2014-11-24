@@ -50,7 +50,7 @@ $ ./run.sh datafile motif nThreads [--show-results]
 $ ./run.sh data/Scere20131031CR.txt 3 4 --show-results
 
 # motif size of 4, 2 threads per node, don't print results
-$ ./run.sh data/test05 3 2
+$ ./run.sh data/test05 4 2
 ```
 
 ## Measuring Performance
