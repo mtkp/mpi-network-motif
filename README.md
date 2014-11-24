@@ -24,6 +24,7 @@ Project structure:
 
 .
 ├── run.sh               <- configure
+├── compile.sh           <- configure
 ├── .mpd.conf            <- create
 ├── mpd.hosts            <- create
 ├── labelg               <- provided for UWB linux lab
