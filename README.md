@@ -14,7 +14,7 @@ Network Motif analysis using MPI (Java)
 
 #### Setup
 
-- Configure the **mpiJava class path** in the script `run.sh` (preconfigured for UWB Linux Lab).
+- Configure the **mpiJava class path** in the `run.sh` and `compile.sh` scripts (preconfigured for UWB Linux Lab).
 - Create and configure the contents of `.mpd.conf` to be `secretword=your-secret-word`, where `your-secret-word` is a secure key that only you know.
 - Create and configure `mpd.hosts` to be the remotes nodes you wish to add to the MPI network at execution time.
 
