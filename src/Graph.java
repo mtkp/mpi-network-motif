@@ -10,14 +10,10 @@ import java.util.List;
 import java.util.Map;
 
 public class Graph implements java.io.Serializable {
-    private List<AdjacencyList> adjacencyLists;
-    private Map<String, Integer> nameToIndex;
-    private Map<Integer, String> indexToName;
+        private List<AdjacencyList> adjacencyLists;
 
     public Graph(String filename) throws IOException {
         adjacencyLists = new ArrayList<AdjacencyList>();
-        nameToIndex = new HashMap<String, Integer>();
-        indexToName = new HashMap<Integer, String>();
         parse(filename);
     }
 
@@ -31,12 +27,20 @@ public class Graph implements java.io.Serializable {
         return adjacencyLists.get(index);
     }
 
-    public Integer nameToIndex(String name) {
-        return nameToIndex.get(name);
-    }
-
-    public String indexToName(Integer index) {
-        return indexToName.get(index);
+    // enumerate all subgraphs for a given node index
+    public void enumerate(int index, int motifSize,
+                          Map<String, Integer> subgraphs) {
+        Subgraph subgraph = new Subgraph(motifSize);
+        AdjacencyList adjacencyList = new AdjacencyList();
+        CompactHashSet.Iter iter = getAdjacencyList(index).iterator();
+        while (iter.hasNext()) {
+            int next = iter.next();
+            if (next > index) {
+                adjacencyList.add(next);
+            }
+        }
+        subgraph.add(index, getAdjacencyList(index));
+        extend(subgraph, adjacencyList, subgraphs);
     }
 
     // enumerate all subgraphs for a given node index
@@ -131,6 +135,9 @@ public class Graph implements java.io.Serializable {
 
     // parses a data file into an adjacency list representing the graph
     private void parse(String filename) throws IOException {
+        Map<String, Integer> nameToIndex = new HashMap<String, Integer>();
+        Map<Integer, String> indexToName = new HashMap<Integer, String>();
+
         BufferedReader reader = new BufferedReader(new FileReader(filename));
         List<String> lines = new ArrayList<String>();
         String currentLine = reader.readLine();
@@ -147,8 +154,8 @@ public class Graph implements java.io.Serializable {
         String delimiters = "\\s+"; // one or more whitespace characters
         for (String line:lines) {
             String[] edge = line.split(delimiters);
-            int fromIndex = getOrCreateIndex(edge[0]);
-            int toIndex = getOrCreateIndex(edge[1]);
+            int fromIndex = getOrCreateIndex(edge[0], nameToIndex, indexToName);
+            int toIndex = getOrCreateIndex(edge[1], nameToIndex, indexToName);
 
             // don't add self edges
             if (fromIndex != toIndex) {
@@ -160,7 +167,9 @@ public class Graph implements java.io.Serializable {
 
     // get index of a node given the node's name
     // create an entry if it does not exist
-    private Integer getOrCreateIndex(String nodeName) {
+    private Integer getOrCreateIndex(String nodeName,
+                                     Map<String, Integer> nameToIndex,
+                                     Map<Integer, String> indexToName) {
         if (!nameToIndex.containsKey(nodeName)) {
             nameToIndex.put(nodeName, adjacencyLists.size());
             indexToName.put(adjacencyLists.size(), nodeName);
