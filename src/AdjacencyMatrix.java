@@ -2,10 +2,9 @@
 
 // Undirected graph representation.
 
-import java.io.Serializable;
 import java.util.BitSet;
 
-public class AdjacencyMatrix implements Serializable {
+public class AdjacencyMatrix {
 
     private int order;
     private BitSet matrix;

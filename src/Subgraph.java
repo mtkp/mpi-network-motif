@@ -2,15 +2,10 @@
 //
 // This class represents a single collection of graph nodes, referred to by
 // node index values.
-//
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 
-public class Subgraph implements Serializable {
+public class Subgraph {
 
     private int[] nodes;
     private AdjacencyMatrix matrix;
@@ -39,10 +34,6 @@ public class Subgraph implements Serializable {
 
     public int order() {
         return nodes.length;
-    }
-
-    public boolean isComplete() {
-        return size() == order();
     }
 
     public int root() {
@@ -82,25 +73,6 @@ public class Subgraph implements Serializable {
         }
         s = s + "]";
         return s;
-    }
-
-    private void readObject(ObjectInputStream ois)
-        throws IOException, ClassNotFoundException {
-        currentSize = ois.readInt();
-        nodes = new int[ois.readInt()];
-        for (int i = 0; i < currentSize; i++) {
-            nodes[i] = ois.readInt();
-        }
-        matrix = (AdjacencyMatrix)ois.readObject();
-    }
-
-    private void writeObject(ObjectOutputStream oos) throws IOException {
-        oos.writeInt(currentSize);
-        oos.writeInt(nodes.length);
-        for (int i = 0; i < currentSize; i++) {
-            oos.writeInt(nodes[i]);
-        }
-        oos.writeObject(matrix);
     }
 
     public String getByteString() {
