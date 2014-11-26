@@ -23,7 +23,7 @@ cp_additions="build"
 nodes=$((`cat mpd.hosts | wc -w` + 1))
 
 mpdboot -n $nodes
-mpirun -n $nodes java -cp $mpi_cp:$cp_additions:. Driver \
+mpirun -n $nodes java -Xms1g -Xmx8g -cp $mpi_cp:$cp_additions:. Driver \
   $nodes \
   $threads_per_node \
   $data_file \
