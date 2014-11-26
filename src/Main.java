@@ -9,36 +9,38 @@ public class Main {
 
     private static class ComputeThread extends Thread {
 
-        private int startingIndex;
-        private int interval;
         private int motifSize;
         private Graph graph;
         private Map<String, Integer> subgraphs;
 
-        public ComputeThread(int startingIndex, int interval, int motifSize,
-                             Graph graph, Map<String, Integer> subgraphs) {
-            this.startingIndex = startingIndex;
-            this.interval = interval;
+        public ComputeThread(int motifSize, Graph graph,
+                             Map<String, Integer> subgraphs) {
             this.motifSize = motifSize;
             this.graph = graph;
             this.subgraphs = subgraphs;
         }
 
         public void run() {
-            for (int i = startingIndex; i < graph.size(); i += interval) {
-                graph.enumerate(i, motifSize, subgraphs);
+            int node = getNextNode();
+            while (node < graph.size()) {
+                graph.enumerate(node, motifSize, subgraphs);
+                node = getNextNode();
             }
         }
     }
 
-    // app execution code goes here
     public void run() throws MPIException {
         int commRank = MPI.COMM_WORLD.Rank();
         int commSize = MPI.COMM_WORLD.Size();
         long start = System.currentTimeMillis();
 
-        Graph graph = null;
+        // setup static (shared) variables for dynamic load balancing
+        lock = new Object();
+        nextNode = commRank;
+        interval = commSize;
 
+        // build the graph
+        Graph graph = null;
         if (commRank == master) {
             System.out.println("Parsing input data file '" + filename + "'...");
             start = System.currentTimeMillis();
@@ -77,24 +79,19 @@ public class Main {
 
         // execute ESU for the indexes this rank is responsible for, equal
         // to: indexes = (rank + (size * n))
-        int interval = commSize * (threads.length + 1);
         Map<String, Integer> subgraphs = new HashMap<String, Integer>();
 
         // start worker threads at this node
         for (int i = 0; i < threads.length; i++) {
-            int startingIndex = commRank + (commSize * (i + 1));
-            threads[i] = new ComputeThread(
-                startingIndex,
-                interval,
-                motifSize,
-                graph,
-                subgraphs);
+            threads[i] = new ComputeThread(motifSize, graph, subgraphs);
             threads[i].start();
         }
 
         // execute algorithm for main thread at this node
-        for (int i = commRank; i < graph.size(); i += interval) {
-            graph.enumerate(i, motifSize, subgraphs);
+        int node = getNextNode();
+        while (node < graph.size()) {
+            graph.enumerate(node, motifSize, subgraphs);
+            node = getNextNode();
         }
 
         // join on worker threads at this node
@@ -178,9 +175,22 @@ public class Main {
     }
 
     // creates an object array container, or "packet", for a single object
-    public static Object[] mpiPacket(Object obj) {
+    private static Object[] mpiPacket(Object obj) {
         Object[] packet = new Object[1];
         packet[0] = obj;
         return packet;
+    }
+
+    private static Object lock;
+    private static int nextNode;
+    private static int interval;
+
+    // provides the next available node to the requesting thread
+    private static int getNextNode() {
+        synchronized (lock) {
+            int node = nextNode;
+            nextNode = nextNode + interval;
+            return node;
+        }
     }
 }
