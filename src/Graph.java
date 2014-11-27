@@ -102,11 +102,8 @@ public class Graph implements java.io.Serializable {
     // (that is, is not already in the subgraph, and is not adjacent to any of
     //  the nodes in the subgraph)
     private boolean isExclusive(int node, Subgraph subgraph) {
-        for (int i = 0; i < subgraph.size(); i++) {
-            int subgraphNode = subgraph.get(i);
-            if (subgraphNode == node) {
-                return false;
-            }
+        if (subgraph.contains(node)) {
+            return false;
         }
         for (int i = 0; i < subgraph.size(); i++) {
             int subgraphNode = subgraph.get(i);
